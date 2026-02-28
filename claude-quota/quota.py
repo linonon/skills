@@ -110,27 +110,29 @@ def parse_time(time_str: Optional[str]) -> Optional[datetime]:
         return None
 
 
-def format_time_remaining(reset_time: datetime) -> str:
-    """Format time remaining until reset."""
-    now = datetime.now(reset_time.tzinfo)
-    delta = reset_time - now
-
-    if delta.total_seconds() < 0:
-        return "Expired (should reset soon)"
-
-    days = delta.days
-    hours, remainder = divmod(delta.seconds, 3600)
-    minutes = remainder // 60
-
-    parts = []
-    if days > 0:
-        parts.append(f"{days}d")
-    if hours > 0:
-        parts.append(f"{hours}h")
-    if minutes > 0 or not parts:
-        parts.append(f"{minutes}m")
-
-    return " ".join(parts)
+def format_reset_time(reset_time: datetime, show_weekday: bool = False) -> str:
+    """Format reset time as absolute local time (Asia/Taipei)."""
+    try:
+        from zoneinfo import ZoneInfo
+        local_tz = ZoneInfo("Asia/Taipei")
+    except ImportError:
+        import datetime as _dt
+        local_tz = _dt.timezone(_dt.timedelta(hours=8))
+    
+    local_time = reset_time.astimezone(local_tz)
+    now = datetime.now(local_time.tzinfo)
+    
+    if (local_time - now).total_seconds() < 0:
+        return "即將重置"
+    
+    time_str = local_time.strftime("%H:%M")
+    
+    if show_weekday:
+        weekdays = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
+        day_name = weekdays[local_time.weekday()]
+        return f"重置於{day_name} {time_str}"
+    else:
+        return f"重置於 {time_str}"
 
 
 def get_status_icon(utilization: float) -> str:
@@ -182,18 +184,18 @@ def format_quota_entry(name: str, entry: dict) -> None:
     # Format reset time
     reset_time = parse_time(resets_at)
     if reset_time:
-        time_remaining = format_time_remaining(reset_time)
-        reset_str = f"Resets in {time_remaining}"
+        show_weekday = name not in ("five_hour",)
+        reset_str = format_reset_time(reset_time, show_weekday=show_weekday)
     else:
-        reset_str = "No reset time"
+        reset_str = "無重置時間"
 
     # Monthly limit shows actual values
     if name == "monthly_limit" and "monthly_limit" in entry:
         used = entry.get("used_credits", 0)
         limit = entry["monthly_limit"]
-        print(f"{icon} {display_name:20} {percent:5.1f}%  ({used:.1f}/{limit:.0f}h)  {reset_str}")
+        print(f"{icon} {display_name:20} 已用 {percent:5.1f}%  ({used:.1f}/{limit:.0f}h)  {reset_str}")
     else:
-        print(f"{icon} {display_name:20} {percent:5.1f}%  {reset_str}")
+        print(f"{icon} {display_name:20} 已用 {percent:5.1f}%  {reset_str}")
 
 
 def main():

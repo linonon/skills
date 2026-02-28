@@ -50,10 +50,11 @@ def main():
     for t in txns:
         cur.execute(
             """INSERT INTO transactions 
-               (message_id, date, payee, narration, account, amount, currency, payment, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               (message_id, date, payee, narration, account, amount, currency, payment, shop, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (msg_id, t["date"], t["payee"], t["narration"], t["account"],
-             t["amount"], t.get("currency", "TWD"), t.get("payment", "Assets:Cash"), ts)
+             t["amount"], t.get("currency", "TWD"), t.get("payment", "Assets:Cash"),
+             t.get("shop"), ts)
         )
 
     conn.commit()

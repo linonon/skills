@@ -57,10 +57,10 @@ description: Guided reading system for articles and books. Use when user wants t
 
 1. 讀取 `index.json` 確認目前進度（`currentSection`）
 2. 從 `<slug>-source.md` 讀取對應段落
-3. 導讀內容：
-   - 原文關鍵段落 + 中文翻譯/解說
-   - 核心概念提煉
-   - 金句標記
+3. 導讀內容（中英對照格式）：
+   - 逐段附上英文原文 + 中文翻譯
+   - 重要概念額外解說
+   - 金句標記（中英對照）
 4. **⚠️ 每讀完一段，立即：**
    - 更新 `<slug>.md` 段落狀態 ⬜ → ✅
    - 寫入導讀筆記

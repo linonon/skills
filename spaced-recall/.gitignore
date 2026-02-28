@@ -1,0 +1,5 @@
+data/recall.db
+data/recall.db-wal
+data/recall.db-shm
+__pycache__/
+*.pyc

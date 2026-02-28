@@ -88,8 +88,15 @@ Use both:
 - Login: `claude auth login`
 - Check credentials exist: `ls ~/.claude/.credentials.json`
 
-**Error: Unauthorized (401)**
-- Token expired, re-login: `claude auth login`
+**Error: Unauthorized - invalid token**
+- OAuth access token 過期（常見問題）
+- **解法：** 用 Claude Code 做一次請求即可自動刷新 token：
+  ```bash
+  echo "hi" | claude --print --max-turns 1
+  ```
+- 刷新後再跑 `python3 quota.py` 即可正常查詢
+- 注意：不需要重新 `claude auth login`，只要 refresh token 還有效，Claude Code 會自動用它換新的 access token
+- 如果上面方法仍失敗，才需要重新登入：`claude auth login`
 
 **Error: requests library not found**
 - Install: `pip3 install requests`
