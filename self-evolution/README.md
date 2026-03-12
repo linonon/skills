@@ -1,82 +1,56 @@
 # Self-Evolution Skill
 
-Self-evolution engine for OpenClaw agents.
+Self-evolution engine for OpenClaw agents — SKILL.md 驅動架構。
 
 ## Status
 
-✅ **v0.3.0 - Auto-Fix Engine Complete**
-
-## Features
-
-### ✅ Phase 1: Analysis (Completed)
-- Session scanner: Reads OpenClaw session transcripts
-- Error detection: Identifies tool errors, exec failures, timeouts, etc.
-- Pattern analysis: Finds recurring issues
-- Report generation: Creates markdown analysis reports
-
-### ✅ Phase 2: Pattern & Recommendations (Completed)
-- Repeated error detection: Identifies issues occurring 3+ times
-- Tool usage analysis: Tracks tool call frequency
-- Smart recommendations: Priority-based suggestions
-  - High priority: Reliability issues (repeated failures, missing files)
-  - Medium priority: Performance issues (timeouts)
-  - Low priority: Optimization opportunities (tool overuse)
-
-### ✅ Phase 3: Auto-Fix (Completed)
-- Fix strategy engine: Generates repair tasks from recommendations
-- Safe execution: Dry-run mode + manual approval
-- sessions_spawn integration: Executes fixes in isolated sessions
-- Fix history: Tracks all fix attempts (success/failure)
-- Learning mechanism: Avoids repeating failed fixes
-
-## Usage
-
-```bash
-# Analyze recent sessions
-node index.js analyze
-
-# Run full evolution cycle (dry-run)
-node index.js fix
-
-# Execute fixes (with manual approval)
-node index.js fix --execute
-
-# Execute fixes (auto-approve all)
-node index.js fix --execute --auto-approve
-
-# View fix history
-node index.js history
-```
+**v0.4.0** — SKILL.md 驅動，放棄 Node.js CLI
 
 ## Architecture
 
+Agent 直接用原生工具（`sessions_list`、`sessions_history`、`sessions_spawn`）執行分析和修復，所有邏輯定義在 `SKILL.md` 中。
+
 ```
-lib/scanner.js   - Scans session transcripts for errors
-lib/fixer.js     - Fix strategy engine (generates repair tasks)
-analyze.js       - Main analysis module
-fix.js           - Fix execution module (runs fixes via sessions_spawn)
-index.js         - CLI entry point
+self-evolution/
+├── SKILL.md                # 主入口：完整 analyze / fix / trend 流程
+├── README.md               # 本檔案
+├── lib/
+│   ├── risk-rules.json     # 風險分級規則
+│   └── validator.sh        # config backup/rollback 腳本
+├── snapshots/              # 每日健康快照（JSON）
+├── pending-actions.md      # high-risk 待人工確認
+├── fixes-history.json      # 修復歷史記錄
+└── legacy/                 # v0.3.0 Node.js 程式碼（封存）
 ```
 
-## Fix Strategies
+## Usage
 
-The auto-fix engine supports multiple repair strategies:
+透過 OpenClaw agent 觸發：
 
-- **Repeated Failures**: Diagnose and fix recurring tool/exec errors
-- **Missing Files**: Check and create missing files or update code
-- **Timeouts**: Optimize slow operations or increase timeout values
-- **Tool Overuse**: Batch operations and cache results
+| 指令 | 功能 |
+|------|------|
+| `self-evolution analyze` | 掃描 session 歷史，偵測錯誤，輸出 snapshot |
+| `self-evolution fix` | 根據 snapshot 修復問題（low-risk 自動，high-risk 通知） |
+| `self-evolution trend` | 讀取最近 7 天 snapshots，分析健康趨勢 |
+| `self-evolution full` | 依序執行 analyze → fix → trend |
 
-Each fix runs in an isolated session with full audit trail.
+## Key Changes from v0.3
 
-## Why Not capability-evolver?
+- **No Node.js dependency** — 所有分析邏輯由 agent 按 SKILL.md 指令執行
+- **Structured snapshots** — JSON 格式取代 markdown 報告
+- **Deduplication** — 同 session 同 tool 同 error 只計 1 次
+- **Risk classification** — `lib/risk-rules.json` 定義 low/high risk 規則
+- **Shell validator** — `lib/validator.sh` 純 shell 實作，不依賴 Node.js
+- **Trend tracking** — 跨日 snapshot 比較，追蹤錯誤趨勢
 
-This skill is designed specifically for OpenClaw:
-- ✅ Uses OpenClaw native tools (no external bridge needed)
-- ✅ Agent-driven execution (not standalone scripts)
-- ✅ Clear audit trail (all actions in session history)
-- ✅ Lightweight and focused
+## Safety
 
-## License
+- Low-risk 修復在 isolated session 執行（`sessions_spawn`）
+- Config 修改前自動備份（`validator.sh backup`）
+- 驗證失敗自動回滾（`validator.sh safe-apply`）
+- High-risk 問題寫入 `pending-actions.md`，等待人工確認
+- 未知類型預設 high_risk（安全優先）
 
-MIT
+## Legacy
+
+v0.3.0 的 Node.js 程式碼保留在 `legacy/` 目錄供參考，不再使用。
