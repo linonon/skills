@@ -1,0 +1,84 @@
+{
+  "date": "2026-03-12",
+  "sessionsScanned": 5,
+  "sessionKeys": [
+    "agent:main:main",
+    "agent:main:cron:128a1384-ab98-4f3f-ba7e-30395abe9612",
+    "agent:main:cron:fbb053cc-2fcd-4a2a-aa0f-e0f7e9f0d4b3",
+    "agent:main:cron:2f1a6238-a402-424a-976c-7b694c8f2f8f",
+    "agent:main:cron:7d212b0f-9aa9-4940-a47c-35b2d4490ae6"
+  ],
+  "errors": {
+    "tool_error": { "count": 2, "tools": ["message", "read"], "deduped": true },
+    "exec_failure": { "count": 2, "tools": ["exec"], "deduped": true },
+    "timeout": { "count": 0, "tools": [], "deduped": true },
+    "network_error": { "count": 0, "tools": [], "deduped": true },
+    "permission_error": { "count": 0, "tools": [], "deduped": true },
+    "not_found": { "count": 1, "tools": ["read"], "deduped": true }
+  },
+  "totalErrors": 5,
+  "topIssues": [
+    {
+      "type": "tool_error",
+      "tool": "message",
+      "pattern": "Local media path is not under an allowed directory",
+      "count": 1,
+      "risk": "low",
+      "sessions": ["agent:main:main"]
+    },
+    {
+      "type": "exec_failure",
+      "tool": "exec",
+      "pattern": "rotate.py KeyError: reports_dir",
+      "count": 1,
+      "risk": "low",
+      "sessions": ["agent:main:cron:2f1a6238-a402-424a-976c-7b694c8f2f8f"]
+    },
+    {
+      "type": "exec_failure",
+      "tool": "exec",
+      "pattern": "Claude Code process killed (exit 143)",
+      "count": 1,
+      "risk": "low",
+      "sessions": ["agent:main:main"]
+    },
+    {
+      "type": "not_found",
+      "tool": "read",
+      "pattern": "ENOENT memory/2026-03-11.md",
+      "count": 1,
+      "risk": "low",
+      "sessions": ["agent:main:cron:7d212b0f-9aa9-4940-a47c-35b2d4490ae6"]
+    },
+    {
+      "type": "tool_error",
+      "tool": "read",
+      "pattern": "ENOENT file not found (benign - file created later)",
+      "count": 1,
+      "risk": "low",
+      "sessions": ["agent:main:cron:7d212b0f-9aa9-4940-a47c-35b2d4490ae6"]
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "medium",
+      "type": "config_fix",
+      "description": "VPN rotate.py 缺少 reports_dir 設定，每次 cron 都會失敗",
+      "risk": "low_risk",
+      "suggestedFix": "在 vpn-analyzer/config.json 加入 reports_dir 欄位"
+    },
+    {
+      "priority": "low",
+      "type": "workaround",
+      "description": "message tool 不允許 symlink 路徑發檔案，需先 cp 到 workspace",
+      "risk": "low_risk",
+      "suggestedFix": "發送 symlink 目錄下的檔案前先複製到 workspace 根目錄"
+    }
+  ],
+  "comparedToPrevious": {
+    "errorDelta": null,
+    "newIssues": [],
+    "resolvedIssues": [],
+    "note": "首次 snapshot，無前次比較資料"
+  }
+}
