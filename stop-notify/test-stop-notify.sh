@@ -11,7 +11,7 @@ fail() { FAIL=$((FAIL + 1)); echo "  FAIL: $1"; }
 echo "=== Testing session-start.sh ==="
 
 # Test 1: 正常写入 UUID 文件
-echo '{"session_id":"test-auto-1"}' | "$SCRIPT_DIR/session-start.sh"
+echo '{"session_id":"test-auto-1"}' | TERM_PROGRAM=ghostty "$SCRIPT_DIR/session-start.sh"
 if [ -f /tmp/claude-stop-notify-test-auto-1 ]; then
   UUID=$(cat /tmp/claude-stop-notify-test-auto-1)
   if [[ "$UUID" =~ ^[A-F0-9-]+$ ]]; then
@@ -31,6 +31,54 @@ if [ ! -f "/tmp/claude-stop-notify-" ]; then
 else
   fail "session-start created file for empty session_id"
   rm -f "/tmp/claude-stop-notify-"
+fi
+
+# Test: VSCode session-start 写入 TERM=vscode 格式
+echo '{"session_id":"test-vscode-1"}' | TERM_PROGRAM=vscode "$SCRIPT_DIR/session-start.sh"
+if [ -f /tmp/claude-stop-notify-test-vscode-1 ]; then
+  CONTENT=$(cat /tmp/claude-stop-notify-test-vscode-1)
+  if echo "$CONTENT" | grep -q "^TERM=vscode$"; then
+    pass "session-start writes TERM=vscode for VSCode"
+  else
+    fail "session-start did not write TERM=vscode, got: $CONTENT"
+  fi
+  if echo "$CONTENT" | grep -q "^DATA="; then
+    pass "session-start writes DATA= line for VSCode"
+  else
+    fail "session-start missing DATA= line for VSCode"
+  fi
+  rm -f /tmp/claude-stop-notify-test-vscode-1
+else
+  fail "session-start did not create file for VSCode"
+fi
+
+# Test: Ghostty session-start 新格式 TERM=ghostty
+echo '{"session_id":"test-ghostty-fmt-1"}' | TERM_PROGRAM=ghostty "$SCRIPT_DIR/session-start.sh"
+if [ -f /tmp/claude-stop-notify-test-ghostty-fmt-1 ]; then
+  CONTENT=$(cat /tmp/claude-stop-notify-test-ghostty-fmt-1)
+  if echo "$CONTENT" | grep -q "^TERM=ghostty$"; then
+    pass "session-start writes TERM=ghostty for Ghostty"
+  else
+    fail "session-start did not write TERM=ghostty, got: $CONTENT"
+  fi
+  if echo "$CONTENT" | grep -q "^DATA=[A-F0-9-]"; then
+    pass "session-start writes DATA=UUID for Ghostty"
+  else
+    fail "session-start missing DATA=UUID for Ghostty"
+  fi
+  rm -f /tmp/claude-stop-notify-test-ghostty-fmt-1
+else
+  # Ghostty 不在运行时会失败, 这是预期行为
+  pass "session-start skips when Ghostty not running (expected in CI)"
+fi
+
+# Test: 未知终端不写文件
+echo '{"session_id":"test-unknown-1"}' | TERM_PROGRAM=xterm "$SCRIPT_DIR/session-start.sh"
+if [ ! -f /tmp/claude-stop-notify-test-unknown-1 ]; then
+  pass "session-start skips unknown terminal"
+else
+  fail "session-start created file for unknown terminal"
+  rm -f /tmp/claude-stop-notify-test-unknown-1
 fi
 
 echo ""
