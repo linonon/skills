@@ -104,23 +104,88 @@ else
   rm -f /tmp/claude-focus-test-auto-4.sh
 fi
 
-# Test 5: 有 UUID 文件时生成 focus 脚本 (使用合法 UUID 格式)
-echo "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE" > /tmp/claude-stop-notify-test-auto-5
+# Test 5: Ghostty 新格式 - 有 TERM=ghostty 文件时生成 Ghostty focus 脚本
+printf 'TERM=ghostty\nDATA=AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE' > /tmp/claude-stop-notify-test-auto-5
 echo '{"stop_hook_active":false,"session_id":"test-auto-5","cwd":"/tmp/myproject","last_assistant_message":"done"}' | "$SCRIPT_DIR/stop-notify.sh"
 sleep 0.2
 if [ -f /tmp/claude-focus-test-auto-5.sh ]; then
-  if grep -q "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE" /tmp/claude-focus-test-auto-5.sh; then
-    pass "stop-notify generates focus script with correct UUID"
+  if grep -q "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE" /tmp/claude-focus-test-auto-5.sh && grep -q "Ghostty" /tmp/claude-focus-test-auto-5.sh; then
+    pass "stop-notify generates Ghostty focus script from new format"
   else
-    fail "focus script does not contain expected UUID"
+    fail "focus script missing UUID or Ghostty reference"
   fi
   rm -f /tmp/claude-focus-test-auto-5.sh
 else
   fail "stop-notify did not generate focus script"
 fi
-# 杀掉后台 terminal-notifier
 pkill -f "terminal-notifier.*test-auto-5" 2>/dev/null
 rm -f /tmp/claude-stop-notify-test-auto-5
+
+# Test: 旧格式 UUID 文件兼容
+echo "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE" > /tmp/claude-stop-notify-test-compat-1
+echo '{"stop_hook_active":false,"session_id":"test-compat-1","cwd":"/tmp/myproject","last_assistant_message":"done"}' | "$SCRIPT_DIR/stop-notify.sh"
+sleep 0.2
+if [ -f /tmp/claude-focus-test-compat-1.sh ]; then
+  if grep -q "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE" /tmp/claude-focus-test-compat-1.sh && grep -q "Ghostty" /tmp/claude-focus-test-compat-1.sh; then
+    pass "stop-notify handles legacy UUID format"
+  else
+    fail "legacy UUID format not handled correctly"
+  fi
+  rm -f /tmp/claude-focus-test-compat-1.sh
+else
+  fail "stop-notify did not generate focus script for legacy format"
+fi
+pkill -f "terminal-notifier.*test-compat-1" 2>/dev/null
+rm -f /tmp/claude-stop-notify-test-compat-1
+
+# Test: VSCode 格式 - 生成 VSCode focus 脚本
+printf 'TERM=vscode\nDATA=/Users/test/project' > /tmp/claude-stop-notify-test-vscode-stop-1
+echo '{"stop_hook_active":false,"session_id":"test-vscode-stop-1","cwd":"/Users/test/project","last_assistant_message":"done"}' | "$SCRIPT_DIR/stop-notify.sh"
+sleep 0.2
+if [ -f /tmp/claude-focus-test-vscode-stop-1.sh ]; then
+  if grep -q "Code" /tmp/claude-focus-test-vscode-stop-1.sh && grep -q "/Users/test/project" /tmp/claude-focus-test-vscode-stop-1.sh; then
+    pass "stop-notify generates VSCode focus script"
+  else
+    fail "VSCode focus script missing Code app or CWD"
+    cat /tmp/claude-focus-test-vscode-stop-1.sh
+  fi
+  rm -f /tmp/claude-focus-test-vscode-stop-1.sh
+else
+  fail "stop-notify did not generate VSCode focus script"
+fi
+pkill -f "terminal-notifier.*test-vscode-stop-1" 2>/dev/null
+rm -f /tmp/claude-stop-notify-test-vscode-stop-1
+
+# Test: focus 脚本包含自删除逻辑
+printf 'TERM=vscode\nDATA=/Users/test/selfdelete' > /tmp/claude-stop-notify-test-selfdelete-1
+echo '{"stop_hook_active":false,"session_id":"test-selfdelete-1","cwd":"/Users/test/selfdelete","last_assistant_message":"done"}' | "$SCRIPT_DIR/stop-notify.sh"
+sleep 0.2
+if [ -f /tmp/claude-focus-test-selfdelete-1.sh ]; then
+  if grep -q 'rm -f' /tmp/claude-focus-test-selfdelete-1.sh; then
+    pass "focus script contains self-delete (rm -f)"
+  else
+    fail "focus script missing self-delete"
+  fi
+  rm -f /tmp/claude-focus-test-selfdelete-1.sh
+else
+  fail "focus script not generated for self-delete test"
+fi
+pkill -f "terminal-notifier.*test-selfdelete-1" 2>/dev/null
+rm -f /tmp/claude-stop-notify-test-selfdelete-1
+
+# Test: CWD 含双引号 - 应降级为 activate app
+printf 'TERM=vscode\nDATA=/Users/test/my"project' > /tmp/claude-stop-notify-test-vscode-quote-1
+echo '{"stop_hook_active":false,"session_id":"test-vscode-quote-1","cwd":"/Users/test/my\"project","last_assistant_message":"done"}' | "$SCRIPT_DIR/stop-notify.sh"
+sleep 0.2
+# 不应该生成包含未转义双引号的 focus 脚本
+if [ -f /tmp/claude-focus-test-vscode-quote-1.sh ]; then
+  fail "stop-notify should not generate focus script for CWD with quotes"
+  rm -f /tmp/claude-focus-test-vscode-quote-1.sh
+else
+  pass "stop-notify degrades for CWD with special chars"
+fi
+pkill -f "terminal-notifier.*test-vscode-quote-1" 2>/dev/null
+rm -f /tmp/claude-stop-notify-test-vscode-quote-1
 
 # Test 6: 无 UUID 文件时不生成 focus 脚本 (降级路径)
 rm -f /tmp/claude-stop-notify-test-auto-6
