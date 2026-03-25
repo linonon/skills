@@ -27,7 +27,6 @@ TERM_TYPE=""
 TERM_DATA=""
 if [ -f "$NOTIFY_FILE" ]; then
   FILE_CONTENT=$(cat "$NOTIFY_FILE")
-  rm -f "$NOTIFY_FILE"
 
   # 向后兼容: 旧格式是纯 UUID 单行
   if [[ "$FILE_CONTENT" =~ ^[A-F0-9-]+$ ]]; then
